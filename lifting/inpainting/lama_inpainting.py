@@ -67,6 +67,6 @@ if __name__ == "__main__":
 
     video_segments = load_segments_npz()
     flow_masks, masks_dilated = video_to_pil(video, video_segments, FFPROBE_PATH)
-    run_propainter(video, flow_masks, masks_dilated, OUTPUT_FOLDER, neighbor_length=7, susubvideo_length=40)
+    run_propainter(video, flow_masks, masks_dilated, OUTPUT_FOLDER, neighbor_length=6, subvideo_length=30)
 
 # C:/proj/2d_to_3d/venv/Scripts/python.exe c:/proj/2d_to_3d/lifting/inpainting/lama_inpainting.py
