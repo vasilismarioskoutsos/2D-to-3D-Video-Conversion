@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 from RAFT import RAFT
 from model.modules.flow_loss_utils import flow_warp, ternary_loss2
+from lifting.point_tracking.waft.model import ViTWarpV8
 
 
 def initialize_RAFT(model_path='weights/raft-things.pth', device='cuda'):
@@ -21,6 +22,23 @@ def initialize_RAFT(model_path='weights/raft-things.pth', device='cuda'):
 
     model.to(device)
 
+    return model
+
+def initialize_WAFT(model_path=r'weights/tar-c-t-kitti-waft.pth', device='cuda'):
+    """Initializes the WAFT model.
+    """
+    args = argparse.ArgumentParser()
+    args.waft_model = model_path
+    args.iters = 20
+    
+    args.dav2_backbone = 'vitl'
+    args.network_backbone = 'vit_large_patch16_224'
+    
+    model = torch.nn.DataParallel(ViTWarpV8(args))
+    model.load_state_dict(torch.load(args.waft_model, map_location='cpu'))
+    model = model.module
+
+    model.to(device)
     return model
 
 
@@ -48,6 +66,41 @@ class RAFT_bi(nn.Module):
             _, gt_flows_forward = self.fix_raft(gtlf_1, gtlf_2, iters=iters, test_mode=True)
             _, gt_flows_backward = self.fix_raft(gtlf_2, gtlf_1, iters=iters, test_mode=True)
 
+        
+        gt_flows_forward = gt_flows_forward.view(b, l_t-1, 2, h, w)
+        gt_flows_backward = gt_flows_backward.view(b, l_t-1, 2, h, w)
+
+        return gt_flows_forward, gt_flows_backward
+    
+class WAFT_bi(nn.Module):
+    def __init__(self, model_path=r'weights/tar-c-t-kitti-waft.pth', device='cuda'):
+        super().__init__()
+        self.fix_waft = initialize_WAFT(model_path, device=device)
+
+        for p in self.fix_waft.parameters():
+            p.requires_grad = False
+
+        self.l1_criterion = nn.L1Loss()
+        self.eval()
+
+    def forward(self, gt_local_frames, iters=20):
+        b, l_t, c, h, w = gt_local_frames.size()
+        # print(gt_local_frames.shape)
+
+        with torch.no_grad():
+            gtlf_1 = gt_local_frames[:, :-1, :, :, :].reshape(-1, c, h, w)
+            gtlf_2 = gt_local_frames[:, 1:, :, :, :].reshape(-1, c, h, w)
+
+            # ProPainter tensors are [-1, 1]. WAFT expects [0, 255]
+            gtlf_1_255 = (gtlf_1 + 1.0) * 127.5
+            gtlf_2_255 = (gtlf_2 + 1.0) * 127.5
+
+            out_forward = self.fix_waft(gtlf_1_255, gtlf_2_255, iters=iters)
+            out_backward = self.fix_waft(gtlf_2_255, gtlf_1_255, iters=iters)
+            
+            # extract the final iteration from the dictionary list
+            gt_flows_forward = out_forward['flow'][-1]
+            gt_flows_backward = out_backward['flow'][-1]
         
         gt_flows_forward = gt_flows_forward.view(b, l_t-1, 2, h, w)
         gt_flows_backward = gt_flows_backward.view(b, l_t-1, 2, h, w)
