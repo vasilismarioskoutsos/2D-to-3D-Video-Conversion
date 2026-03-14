@@ -31,8 +31,8 @@ def initialize_WAFT(model_path=r'weights/tar-c-t-kitti-waft.pth', device='cuda')
     args.waft_model = model_path
     args.iters = 20
     
-    args.dav2_backbone = 'vitl'
-    args.network_backbone = 'vit_large_patch16_224'
+    args.dav2_backbone = 'vits'
+    args.network_backbone = 'vits'
     
     model = torch.nn.DataParallel(ViTWarpV8(args))
     model.load_state_dict(torch.load(args.waft_model, map_location='cpu'))

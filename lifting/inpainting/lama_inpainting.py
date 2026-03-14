@@ -1,5 +1,4 @@
 import os
-import subprocess as sp
 import numpy as np
 import cv2
 import sys

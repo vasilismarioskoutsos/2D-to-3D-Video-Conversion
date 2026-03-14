@@ -11,7 +11,7 @@ from tqdm import tqdm
 import torch
 import torchvision
 
-from model.modules.flow_comp_raft import RAFT_bi
+from model.modules.flow_comp_raft import RAFT_bi, WAFT_bi
 from model.recurrent_flow_completion import RecurrentFlowCompleteNet
 from model.propainter import InpaintGenerator
 from utils.download_util import load_file_from_url
@@ -229,7 +229,7 @@ def run_propainter_waft(video, flow_masks, masks_dilated, output_folder, resize_
     ##############################################
     ckpt_path = load_file_from_url(url=os.path.join(pretrain_model_url, 'tar-c-t-kitti-waft.pth'), 
                                     model_dir='weights', progress=True, file_name=None)
-    fix_waft = RAFT_bi(ckpt_path, device)
+    fix_waft = WAFT_bi(ckpt_path, device)
     
     ckpt_path = load_file_from_url(url=os.path.join(pretrain_model_url, 'recurrent_flow_completion.pth'), 
                                     model_dir='weights', progress=True, file_name=None)
