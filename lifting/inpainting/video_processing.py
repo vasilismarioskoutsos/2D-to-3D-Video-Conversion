@@ -1,6 +1,7 @@
 import os
 import subprocess as sp
 import sys
+import numpy as np
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
 root_dir = os.path.abspath(os.path.join(current_dir, '..', '..'))
@@ -118,6 +119,60 @@ def add_padding_frames(video, first_frames, last_frames, FFMPEG_PATH, output_pat
     pipe.stdin.close()
     pipe.wait()
 
+def load_segments_npz(filename="sam2_results.npz"):
+    data = np.load(filename)
+    video_segments = {}
+    for key in data.files:
+        frame_str, obj_str = key.split('_')
+        frame, obj = int(frame_str), int(obj_str)
+        
+        if frame not in video_segments:
+            video_segments[frame] = {}
+        video_segments[frame][obj] = data[key]
+        
+    return video_segments
+
+def save_segments_npz(video_segments, filename="sam2_results.npz"):
+    # creates keys like "frame0_obj0", "frame0_obj1", ...
+    flat_dict = {f"{frame}_{obj}": mask 
+                 for frame, objs in video_segments.items() 
+                 for obj, mask in objs.items()}
+    np.savez_compressed(filename, **flat_dict)
+    print(f"Saved segments to {filename}")
+
+def add_padding_sam_npz(padding_num, filename="sam2_results.npz"):
+    video_segments = load_segments_npz(filename)
+
+    # find the total number of frames
+    max_frame = max(video_segments.keys())
+    total_original_frames = max_frame + 1
+    
+    new_video_segments = {}
+    new_frame_idx = 0
+    
+    # front padding
+    for i in range(padding_num - 1, -1, -1):
+        if i in video_segments:
+            new_video_segments[new_frame_idx] = video_segments[i]
+        new_frame_idx += 1
+        
+    # original frmaes
+    for i in range(total_original_frames):
+        if i in video_segments:
+            new_video_segments[new_frame_idx] = video_segments[i]
+        new_frame_idx += 1
+        
+    # back padding
+    start_last = total_original_frames - padding_num
+    for i in range(max_frame, start_last - 1, -1):
+        if i in video_segments:
+            new_video_segments[new_frame_idx] = video_segments[i]
+        new_frame_idx += 1
+        
+    # Save the re-indexed segments to a new file
+    save_segments_npz(new_video_segments, filename="sam2_results_padding.npz")
+    
+
 if __name__ == "__main__":
     video = r"videos\bike_cut.mp4"
     OUTPUT_VIDEO = r"videos\bike_reverse_padding.mp4"
@@ -125,10 +180,12 @@ if __name__ == "__main__":
     FFPROBE_PATH = r"C:\ffmpeg-2026-02-04-git-627da1111c-full_build\bin\ffprobe.exe"
     PADDING = 30
 
-    width, height = get_dimensions(video, FFPROBE_PATH)
-    fps = get_video_fps(video, FFPROBE_PATH)
-    first_frames = get_first_n_frames(video, FFMPEG_PATH, PADDING, width, height)
-    last_frames = get_last_n_frames(video, FFMPEG_PATH, FFPROBE_PATH, PADDING, width, height)
-    add_padding_frames(video, first_frames, last_frames, FFMPEG_PATH, OUTPUT_VIDEO, width, height, fps)
+    #width, height = get_dimensions(video, FFPROBE_PATH)
+    #fps = get_video_fps(video, FFPROBE_PATH)
+    #first_frames = get_first_n_frames(video, FFMPEG_PATH, PADDING, width, height)
+    #last_frames = get_last_n_frames(video, FFMPEG_PATH, FFPROBE_PATH, PADDING, width, height)
+    #add_padding_frames(video, first_frames, last_frames, FFMPEG_PATH, OUTPUT_VIDEO, width, height, fps)
+
+    add_padding_sam_npz(PADDING)
 
 # C:/proj/2d_to_3d/venv/Scripts/python.exe c:/proj/2d_to_3d/lifting/inpainting/video_processing.py
