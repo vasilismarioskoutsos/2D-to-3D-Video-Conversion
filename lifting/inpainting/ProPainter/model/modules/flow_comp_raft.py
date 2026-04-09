@@ -2,10 +2,11 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-
+import argparse
 from RAFT import RAFT
 from model.modules.flow_loss_utils import flow_warp, ternary_loss2
-
+from lifting.point_tracking.waft.model import ViTWarpV8
+from collections import OrderedDict
 
 def initialize_RAFT(model_path='weights/raft-things.pth', device='cuda'):
     """Initializes the RAFT model.
@@ -23,6 +24,33 @@ def initialize_RAFT(model_path='weights/raft-things.pth', device='cuda'):
 
     return model
 
+def initialize_WAFT(model_path=r'weights/tar-c-t-kitti-waft.pth', device='cuda'):
+    """Initializes the WAFT model"""
+    
+    args = argparse.Namespace()
+    args.waft_model = model_path
+    args.iters = 20
+    args.dav2_backbone = 'vits'
+    args.network_backbone = 'vits'
+    
+    model = ViTWarpV8(args)
+    
+    checkpoint = torch.load(args.waft_model, map_location='cpu')
+    
+    # strip module. prefix if it exists
+    new_state_dict = OrderedDict()
+    for k, v in checkpoint.items():
+        if k.startswith('module.'):
+            new_state_dict[k[7:]] = v
+        else:
+            new_state_dict[k] = v
+    
+    model.load_state_dict(new_state_dict, strict=False)
+    
+    model.to(device)
+    
+    model.eval()
+    return model
 
 class RAFT_bi(nn.Module):
     """Flow completion loss"""
@@ -49,6 +77,57 @@ class RAFT_bi(nn.Module):
             _, gt_flows_backward = self.fix_raft(gtlf_2, gtlf_1, iters=iters, test_mode=True)
 
         
+        gt_flows_forward = gt_flows_forward.view(b, l_t-1, 2, h, w)
+        gt_flows_backward = gt_flows_backward.view(b, l_t-1, 2, h, w)
+
+        return gt_flows_forward, gt_flows_backward
+    
+class WAFT_bi(nn.Module):
+    def __init__(self, model_path=r'weights/tar-c-t-kitti-waft.pth', device='cuda'):
+        super().__init__()
+        self.fix_waft = initialize_WAFT(model_path, device=device)
+
+        for p in self.fix_waft.parameters():
+            p.requires_grad = False
+
+        self.l1_criterion = nn.L1Loss()
+        self.eval()
+
+    def forward(self, gt_local_frames, iters=20):
+        b, l_t, c, h, w = gt_local_frames.size()
+        # print(gt_local_frames.shape)
+
+        scale_factor = 0.5 # to use less VRAM
+
+        with torch.no_grad():
+            gtlf_1 = gt_local_frames[:, :-1, :, :, :].reshape(-1, c, h, w)
+            gtlf_2 = gt_local_frames[:, 1:, :, :, :].reshape(-1, c, h, w)
+
+            small_h = int(h * scale_factor)
+            small_w = int(w * scale_factor)
+
+            gtlf_1_small = F.interpolate(gtlf_1, size=(small_h, small_w), mode="bilinear", align_corners=True)
+            gtlf_2_small = F.interpolate(gtlf_2, size=(small_h, small_w), mode="bilinear", align_corners=True)
+
+            # ProPainter tensors are [-1, 1], WAFT expects [0, 255]
+            gtlf_1_255 = (gtlf_1_small + 1.0) * 127.5
+            gtlf_2_255 = (gtlf_2_small + 1.0) * 127.5
+
+            out_forward = self.fix_waft(gtlf_1_255, gtlf_2_255, iters=iters)
+            out_backward = self.fix_waft(gtlf_2_255, gtlf_1_255, iters=iters)
+            
+            # extract the final iteration from the dictionary list
+            gt_flows_forward_small = out_forward['flow'][-1]
+            gt_flows_backward_small = out_backward['flow'][-1]
+
+            # upscale flow to original resolution
+            gt_flows_forward = F.interpolate(gt_flows_forward_small, size=(h, w), mode="bilinear", align_corners=True)
+            gt_flows_backward = F.interpolate(gt_flows_backward_small, size=(h, w), mode="bilinear", align_corners=True)
+
+            # adjust vector magnitude, because if the images is 2 times bigger the pixel travelled 2 times more
+            gt_flows_forward = gt_flows_forward * (1.0 / scale_factor)
+            gt_flows_backward = gt_flows_backward * (1.0 / scale_factor)
+
         gt_flows_forward = gt_flows_forward.view(b, l_t-1, 2, h, w)
         gt_flows_backward = gt_flows_backward.view(b, l_t-1, 2, h, w)
 

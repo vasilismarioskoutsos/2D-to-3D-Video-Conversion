@@ -1,0 +1,1 @@
+Namespace(sh_degree=0, source_path='example/bike_3d_result', model_path='example/bike_3d_result', images='images', resolution=1, white_background=False, data_device='cuda', eval=True, extension='.png', num_extra_pts=0, loaded_pth='', frame_ratio=1, dataloader=False)

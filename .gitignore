@@ -12,6 +12,7 @@ venv/
 
 *.png
 *.npz
+*.npy
 *.onnx
 *.bin
 *.sh
@@ -20,6 +21,10 @@ venv/
 *.pth
 *.jpg
 *.gif
+*.ply
+*.pt
+*.mp4
+*.ckpt
 
 predictions.txt
 
@@ -37,3 +42,6 @@ lifting/segmentation/sam2.1_tiny/
 
 lifting/inpainting/ProPainter/configs/
 lifting/inpainting/ProPainter/datasets/
+
+4DGS/Instant4D/example/bike_3d_result/iter_3000/test
+4DGS/shape-of-motion/output/checkpoints/
