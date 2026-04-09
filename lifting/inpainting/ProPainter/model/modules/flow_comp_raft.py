@@ -30,6 +30,7 @@ def initialize_WAFT(model_path=r'weights/tar-c-t-kitti-waft.pth', device='cuda')
     args = argparse.Namespace()
     args.waft_model = model_path
     args.iters = 20
+
     args.dav2_backbone = 'vits'
     args.network_backbone = 'vits'
     

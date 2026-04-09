@@ -4,6 +4,8 @@ import torch.nn as nn
 import numpy as np
 from scipy.spatial import cKDTree
 import json
+import open3d as o3d
+from pytorch3d.transforms import matrix_to_rotation_6d, rotation_6d_to_matrix
 import os
 import sys
 
