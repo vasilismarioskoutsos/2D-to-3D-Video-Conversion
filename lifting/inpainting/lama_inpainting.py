@@ -58,4 +58,4 @@ if __name__ == "__main__":
     flow_masks, masks_dilated = video_to_pil(video, video_segments, FFPROBE_PATH)
     run_propainter_waft(video, flow_masks, masks_dilated, OUTPUT_FOLDER, neighbor_length=5, subvideo_length=18)
 
-# C:/proj/2d_to_3d/venv/Scripts/python.exe c:/proj/2d_to_3d/lifting/inpainting/lama_inpainting.py
+# C:/vasilis/2D-to-3D-Video-Conversion/.venv/Scripts/python.exe c:/vasilis/2D-to-3D-Video-Conversion/lifting/inpainting/lama_inpainting.py

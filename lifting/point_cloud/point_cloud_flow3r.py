@@ -3,13 +3,12 @@ import sys
 import torch
 import numpy as np
 import subprocess as sp
-
 current_dir = os.path.dirname(os.path.abspath(__file__))
 flow3r_dir = os.path.join(current_dir, 'flow3r')
 if flow3r_dir not in sys.path:
     sys.path.append(flow3r_dir)
 
-from flow3r.flow3r.models.flow3r import Flow3r
+from flow3r.models.flow3r import Flow3r
 
 def flow3r(video_tensor):
     # init
@@ -28,11 +27,14 @@ def flow3r(video_tensor):
         output = model(video_tensor.cuda())
         print("AVAILABLE KEYS FROM MODEL:", output.keys())
 
+    # results
+    world_points = output['points'] # shape (B, N, H, W, 3)
+
+    #return world_points
     return output
 
-def correct_input(video, FFMPEG_PATH):
+def correct_input(video, FFMPEG_PATH, frames):
     target_size = 518
-    frames = 7
     
     command = [FFMPEG_PATH,
             '-f', 'mp4',
@@ -133,12 +135,19 @@ def export_to_ply_meshlab(world_points, video_tensor, output_path="output.ply", 
                 
 if __name__ == "__main__":
     video = r"videos\bike_cut.mp4"
-    OUTPUT_NAME = "bike_flow3r"
+    OUTPUT_NAME = "bike_sam"
     FFMPEG_PATH = r"C:\ffmpeg-2026-02-04-git-627da1111c-full_build\bin\ffmpeg.exe"
     FFPROBE_PATH = r"C:\ffmpeg-2026-02-04-git-627da1111c-full_build\bin\ffprobe.exe"
 
-    input = correct_input(video, FFMPEG_PATH)
+    input = correct_input(video, FFMPEG_PATH, frames=7)
+    #points = flow3r(input)
     output = flow3r(input)
-    # results
-    points = output['points'] # shape (B, N, H, W, 3)
-    export_to_ply_meshlab(points, input)
+    #export_to_ply_meshlab(points, input)
+    #local_points = output['local_points']
+    #print('Z min:', local_points[..., 2].min().item())
+    #print('Z max:', local_points[..., 2].max().item())
+    print('local_points shape:', output['local_points'].shape)
+
+                
+
+# C:/vasilis/2D-to-3D-Video-Conversion/.venv/Scripts/python.exe c:/vasilis/2D-to-3D-Video-Conversion/lifting/point_cloud/point_cloud_flow3r.py

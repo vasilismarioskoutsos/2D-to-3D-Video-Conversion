@@ -53,7 +53,6 @@ def initialize_WAFT(model_path=r'weights/tar-c-t-kitti-waft.pth', device='cuda')
     model.eval()
     return model
 
-
 class RAFT_bi(nn.Module):
     """Flow completion loss"""
     def __init__(self, model_path='weights/raft-things.pth', device='cuda'):

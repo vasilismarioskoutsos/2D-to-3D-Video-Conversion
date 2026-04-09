@@ -13,7 +13,7 @@ from lifting.point_tracking.find_moving_pixels import run_waft, get_source_and_d
 from lifting.segmentation.helpers import show_mask, show_points, show_box
 
 current_dir = os.path.dirname(os.path.abspath(__file__))
-sam2_dir = os.path.join(current_dir, r'lifting/segmentation/segment-anything-2')
+sam2_dir = os.path.join(current_dir, 'segment-anything-2') 
 sys.path.append(sam2_dir)
 
 from sam2.build_sam import build_sam2_video_predictor
@@ -105,6 +105,23 @@ def gen_segmentation_video(video_segments, frames, OUTPUT_NAME):
 
     out_video.release()
 
+# for shape of motion pipeline
+def build_background_mask(video_segments, num_frames, height, width):
+    # start with everything as background
+    background_mask = np.ones((num_frames, height, width), dtype=np.float32)
+    
+    for frame_idx, objects in video_segments.items():
+        for obj_id, mask in objects.items():
+            # mask shape is (1, H, W), squeeze to (H, W)
+            mask_2d = np.squeeze(mask)
+            # wherever SAM says foreground, set to 0
+            background_mask[frame_idx][mask_2d] = 0.0
+    
+    # flatten H*W for point cloud indexing
+    background_mask = background_mask.reshape(num_frames, -1)
+    
+    return torch.tensor(background_mask, dtype=torch.float32)
+
 def save_segments_npz(video_segments, filename="sam2_results.npz"):
     # creates keys like "frame0_obj0", "frame0_obj1", ...
     flat_dict = {f"{frame}_{obj}": mask 
@@ -145,7 +162,9 @@ if __name__ == "__main__":
 
     # points have to be [[x1, y1], [x2, y2], ...]
     results = sam2_1(video, checkpoint, model_cfg, objects, frames=frames)
+    background_mask = build_background_mask(results, len(frames), height, width)
+    torch.save(background_mask, "background_mask.pt")
     save_segments_npz(results)
     #gen_segmentation_video(results, frames, OUTPUT_NAME)
 
-# C:/proj/2d_to_3d/venv/Scripts/python.exe -m lifting.segmentation.segment_objects
+# C:/vasilis/2D-to-3D-Video-Conversion/.venv/Scripts/python.exe -m lifting.segmentation.segment_objects

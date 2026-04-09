@@ -188,4 +188,5 @@ if __name__ == "__main__":
 
     add_padding_sam_npz(PADDING)
 
+# C:/vasilis/2D-to-3D-Video-Conversion/.venv/Scripts/python.exe c:/vasilis/2D-to-3D-Video-Conversion/lifting/inpainting/video_processing.py
 # C:/proj/2d_to_3d/venv/Scripts/python.exe c:/proj/2d_to_3d/lifting/inpainting/video_processing.py
