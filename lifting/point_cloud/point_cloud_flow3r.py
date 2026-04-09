@@ -28,10 +28,7 @@ def flow3r(video_tensor):
         output = model(video_tensor.cuda())
         print("AVAILABLE KEYS FROM MODEL:", output.keys())
 
-    # results
-    world_points = output['points'] # shape (B, N, H, W, 3)
-
-    return world_points
+    return output
 
 def correct_input(video, FFMPEG_PATH):
     target_size = 518
@@ -136,10 +133,12 @@ def export_to_ply_meshlab(world_points, video_tensor, output_path="output.ply", 
                 
 if __name__ == "__main__":
     video = r"videos\bike_cut.mp4"
-    OUTPUT_NAME = "bike_sam"
+    OUTPUT_NAME = "bike_flow3r"
     FFMPEG_PATH = r"C:\ffmpeg-2026-02-04-git-627da1111c-full_build\bin\ffmpeg.exe"
     FFPROBE_PATH = r"C:\ffmpeg-2026-02-04-git-627da1111c-full_build\bin\ffprobe.exe"
 
     input = correct_input(video, FFMPEG_PATH)
-    points = flow3r(input)
+    output = flow3r(input)
+    # results
+    points = output['points'] # shape (B, N, H, W, 3)
     export_to_ply_meshlab(points, input)
