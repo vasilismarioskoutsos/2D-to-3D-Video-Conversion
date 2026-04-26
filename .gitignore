@@ -29,7 +29,6 @@ venv/
 predictions.txt
 
 videos/
-cotracker3/
 
 lifting/segmentation/segment-anything-2/demo/
 lifting/segmentation/segment-anything-2/notebooks/
