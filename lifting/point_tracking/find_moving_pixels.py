@@ -3,6 +3,7 @@ import torch
 import torchvision
 import numpy as np
 import poselib
+import os
 from lifting.point_tracking.waft.waft_utils import InferenceWrapper
 from lifting.point_tracking.waft.waft_utils import flow_to_image
 from lifting.point_tracking.waft.model import ViTWarpV8
@@ -65,7 +66,7 @@ def draw_image_overlay(flow_list, frame1):
 
         cv2.imwrite("overlay_waft.png", overlay)
 
-def get_source_and_dest_waft(flow_data, step=50):
+def get_source_and_dest_waft(flow_data, step=2):
     h, w = flow_data.shape[:2]
 
     # generate the source points
@@ -160,7 +161,7 @@ def draw_final_points(points, frame):
     
     cv2.imwrite("final_points.png", image)
 
-def group_points_to_objects(points, step=50):
+def group_points_to_objects(points, step=2):
     # connected_components needs the points to be 1 pixel apart
     scaled_x = (points[:, 0] // step).astype(int)
     scaled_y = (points[:, 1] // step).astype(int)
@@ -198,20 +199,35 @@ def center_of_cluster(point_labels):
         objects.append(best_point)
 
     return objects
-    
+
+def box_cluster(point_labels, min_points=1):
+    objects = []
+    for obj in point_labels:
+        if len(obj) < min_points:
+            continue  # skip noise clusters
+        x_min, y_min = obj.min(axis=0)
+        x_max, y_max = obj.max(axis=0)
+        objects.append(np.array([x_min, y_min, x_max, y_max], dtype=np.float32))
+    return objects
+
 if __name__ == "__main__":
     checkpoint_path = r"lifting\point_tracking\waft\tar-c-t-kitti.pth"
     video = r"videos\bike_cut.mp4"
-    OUTPUT_NAME = "bike_waft"
+    OUTPUT_NAME = r"videos\bike_4dgs"
     RANSAC_ERROR_THRESHOLD = 3.0
+    NUM_FRAMES = 24
+    n_stride = 2 # every nth frame
 
     video_frames, _, _ = torchvision.io.read_video(video, pts_unit='sec')
-    flow_list, frame1, frame2 = run_waft(checkpoint_path, video_frames)
+    video_frames = video_frames[::n_stride][:NUM_FRAMES]
+
+    detection_frames = torch.stack([video_frames[0], video_frames[20]])
+    flow_list, frame1, frame2 = run_waft(checkpoint_path, detection_frames)
     #draw_image_overlay(flow_list, frame1)
     flow_tensor = flow_list[-1]
     flow_data = flow_tensor[0].permute(1, 2, 0).detach().cpu().numpy()
     #source, dest = get_source_and_dest_fast(frame1, frame2)
-    source, dest = get_source_and_dest_waft(flow_data)
+    source, dest = get_source_and_dest_waft(flow_data, step=5)
     H, inliers, outliers = lo_ransac(source, dest, RANSAC_ERROR_THRESHOLD)
     if H is not None:
         final_points = get_final_points(source, outliers)

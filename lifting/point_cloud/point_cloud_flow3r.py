@@ -33,17 +33,18 @@ def flow3r(video_tensor):
     #return world_points
     return output
 
-def correct_input(video, FFMPEG_PATH, frames):
+def correct_input(video, FFMPEG_PATH, frames, stride=1):
     target_size = 518
+    actual_frames = frames // stride  
     
     command = [FFMPEG_PATH,
             '-f', 'mp4',
             '-i', video,
-            '-vframes', str(frames), # Ensure we only grab exactly 10 frames
+            '-vf', f'select=not(mod(n\\,{stride})),scale={target_size}:{target_size}:force_original_aspect_ratio=decrease,pad={target_size}:{target_size}:(ow-iw)/2:(oh-ih)/2',
+            '-vframes', str(actual_frames),
             '-f', 'image2pipe',
             '-pix_fmt', 'rgb24',
             '-vcodec', 'rawvideo',
-            '-vf', f'scale={target_size}:{target_size}:force_original_aspect_ratio=decrease,pad={target_size}:{target_size}:(ow-iw)/2:(oh-ih)/2', 
             'pipe:1']
     
     pipe = sp.Popen(command, stdout=sp.PIPE, bufsize=10**8)
@@ -135,11 +136,11 @@ def export_to_ply_meshlab(world_points, video_tensor, output_path="output.ply", 
                 
 if __name__ == "__main__":
     video = r"videos\bike_cut.mp4"
-    OUTPUT_NAME = "bike_sam"
+    OUTPUT_NAME = r"videos\bike_4dgs"
     FFMPEG_PATH = r"C:\ffmpeg-2026-02-04-git-627da1111c-full_build\bin\ffmpeg.exe"
     FFPROBE_PATH = r"C:\ffmpeg-2026-02-04-git-627da1111c-full_build\bin\ffprobe.exe"
 
-    input = correct_input(video, FFMPEG_PATH, frames=7)
+    input = correct_input(video, FFMPEG_PATH, frames=220, stride=10)
     #points = flow3r(input)
     output = flow3r(input)
     #export_to_ply_meshlab(points, input)

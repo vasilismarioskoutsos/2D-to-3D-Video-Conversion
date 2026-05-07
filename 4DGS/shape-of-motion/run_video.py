@@ -125,8 +125,7 @@ class VideoConfig:
             tyro.conf.subcommand(
                 name="davis",
                 default=DavisDataConfig(
-                    seq_name=tyro.MISSING,
-                    root_dir=tyro.MISSING,
+                    data_dir=tyro.MISSING,
                     load_from_cache=True,
                 ),
             ),
@@ -148,7 +147,10 @@ class VideoConfig:
 
 
 def main(cfg: VideoConfig):
-    train_dataset = get_train_val_datasets(cfg.data, load_val=False)[0]
+    with open(f"{cfg.work_dir}/cfg.yaml", "r") as file:
+        train_cfg = yaml.safe_load(file)
+    from flow3d.data.casual_dataset import CasualDataset
+    train_dataset = CasualDataset(**train_cfg["data"])
     guru.info(f"Training dataset has {train_dataset.num_frames} frames")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -159,6 +161,7 @@ def main(cfg: VideoConfig):
     renderer = Renderer.init_from_checkpoint(
         ckpt_path,
         device,
+        use_2dgs=train_cfg["use_2dgs"],
         work_dir=cfg.work_dir,
         port=None,
     )
@@ -241,7 +244,9 @@ def main(cfg: VideoConfig):
     # w2cs = train_w2cs[:1].repeat(num_frames, 1, 1)
     # ts = torch.arange(num_frames, device=device)
     # assert len(w2cs) == len(ts)
-
+    if len(w2cs) == 1:
+        w2cs = w2cs.repeat(len(ts), 1, 1)
+        
     video = []
     for w2c, t in zip(tqdm(w2cs), ts):
         with torch.inference_mode():

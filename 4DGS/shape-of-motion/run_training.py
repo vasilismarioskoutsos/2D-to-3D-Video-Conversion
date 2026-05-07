@@ -68,7 +68,7 @@ class TrainConfig:
     optim: OptimizerConfig
     num_fg: int = 40_000
     num_bg: int = 100_000
-    num_motion_bases: int = 10
+    num_motion_bases: int = 30
     num_epochs: int = 500
     port: int | None = None
     vis_debug: bool = False 

@@ -1,0 +1,73 @@
+batch_size: 8
+data:
+  camera_type: droid_recon
+  data_dir: C:\vasilis\2D-to-3D-Video-Conversion\videos\bike_4dgs
+  depth_type: aligned_depth_anything
+  end: -1
+  image_type: images
+  load_from_cache: false
+  mask_erosion_radius: 7
+  mask_type: masks
+  num_targets_per_frame: 4
+  res: 1x
+  scene_norm_dict: null
+  start: 0
+  track_2d_type: bootstapir
+loss:
+  w_depth_const: 0.1
+  w_depth_grad: 1
+  w_depth_reg: 0.5
+  w_mask: 1.0
+  w_rgb: 1.0
+  w_scale_var: 0.01
+  w_smooth_bases: 0.1
+  w_smooth_tracks: 2.0
+  w_track: 2.0
+  w_z_accel: 1.0
+lr:
+  bg:
+    colors: 0.01
+    means: 0.00016
+    opacities: 0.05
+    quats: 0.001
+    scales: 0.005
+  camera_poses:
+    Rs: 0.001
+    ts: 0.001
+  camera_scales:
+    camera_scales: 0.0001
+  fg:
+    colors: 0.01
+    means: 0.00016
+    motion_coefs: 0.01
+    opacities: 0.01
+    quats: 0.001
+    scales: 0.005
+  motion_bases:
+    rots: 0.00016
+    transls: 0.00016
+num_bg: 200000
+num_dl_workers: 4
+num_epochs: 500
+num_fg: 80000
+num_motion_bases: 10
+optim:
+  control_every: 100
+  cull_opacity_threshold: 0.1
+  cull_scale_threshold: 0.5
+  cull_screen_threshold: 0.15
+  densify_scale_threshold: 0.01
+  densify_screen_threshold: 0.05
+  densify_xys_grad_threshold: 0.0002
+  max_steps: 20000
+  reset_opacity_every_n_controls: 30
+  stop_control_by_screen_steps: 4000
+  stop_control_steps: 4000
+  stop_densify_steps: 15000
+  warmup_steps: 200
+port: null
+save_videos_every: 50
+use_2dgs: false
+validate_every: 50
+vis_debug: false
+work_dir: ./output_bike

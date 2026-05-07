@@ -1,7 +1,7 @@
 import os
 import time
 from dataclasses import dataclass
-
+from pathlib import Path
 import torch
 import tyro
 from loguru import logger as guru
@@ -33,7 +33,7 @@ def main(cfg: RenderConfig):
         ckpt_path,
         device,
         use_2dgs=train_cfg["use_2dgs"],
-        work_dir=cfg.work_dir,
+        work_dir=Path(cfg.work_dir),
         port=cfg.port,
     )
 

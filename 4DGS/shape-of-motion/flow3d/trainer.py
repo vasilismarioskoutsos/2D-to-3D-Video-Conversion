@@ -547,7 +547,7 @@ class Trainer:
                 and global_step % self.reset_opacity_every > num_frames
             ):
                 self._densify_control_step(global_step)
-            if global_step % self.reset_opacity_every > min(3 * num_frames, 1000):
+            if global_step % self.reset_opacity_every > min(10 * num_frames, 2000):
                 self._cull_control_step(global_step)
             if global_step % self.reset_opacity_every == 0:
                 self._reset_opacity_control_step()
